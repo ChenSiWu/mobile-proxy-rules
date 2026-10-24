@@ -10,6 +10,23 @@
 
 脚本接口为 `main(config)`。未知订阅透传，不猜测它的主组、不覆盖其原规则。当前识别 MNKCloud、Ikuuu 及具有原始四个节点分类的 Qianlink 配置。识别失效时应检查服务商是否改了结构，不以网页能打开冒充增强仍生效。
 
+## 三套远程脚本
+
+两个客户端可以保留以下三项，使用时只选择一项，不串联执行：
+
+| 手机中的名称 | 远程来源 | 用途 |
+| --- | --- | --- |
+| `Mobile-Full-Custom` | 本仓库的 [Bettbox 版](https://raw.githubusercontent.com/ChenSiWu/mobile-proxy-rules/main/Bettbox/mobile-full.js) / [FlClash 版](https://raw.githubusercontent.com/ChenSiWu/mobile-proxy-rules/main/FlClash/mobile-full.js) | 手机适配版，作为日常主用 |
+| `MyClash-Lite-Official` | [MyClash 官方精简版](https://raw.githubusercontent.com/AIsouler/MyClash/main/Script/Script.js) | 保留官方原始代码，作为备选 |
+| `MyClash-Full-Official` | [MyClash 官方全量版](https://raw.githubusercontent.com/AIsouler/MyClash/main/Script/mihomoScript.js) | 保留官方原始代码，作为备选 |
+
+官方两项直接跟随上游地址，不在本仓库复制维护，也不套用我们的订阅适配。远程脚本下载后由客户端保存在内部；普通订阅刷新不等于更新脚本，更新脚本应使用其菜单中的“同步”。不能把“远程”理解成已经启用自动定时更新。
+
+- **Bettbox 切换**：配置 → 覆写脚本，选择需要的一项。它是全局脚本，影响开启“使用全局脚本覆写”的订阅；需要原样保留规则的订阅可单独关闭该选项。
+- **FlClash 切换**：配置 → 对应订阅的菜单 → 扩展 → 脚本，选择三项之一。选择按订阅保存，不会自动改变其他订阅的绑定。
+- **同步不等于兼容验收**：官方脚本会重建分组、处理节点名称并调整 DNS/TUN；含 `proxy-providers` 的输入会被官方原版拒绝。不能保证换回后当前手选、DNS 行为或所有订阅例外原样沿用。切换后先核对主组、节点、国内/海外规则与真实 DNS，再长期使用；上游也要求关闭客户端 DNS 覆写。
+- 官方原版可能生成 Steam 等分组，这是上游自身行为；不应把我们的手机裁剪逻辑描述成官方版也有。
+
 ## 分组和规则
 
 - 保留原节点名和参数，节点及套餐提示动态读取，不跨订阅混池。
@@ -39,7 +56,7 @@ Qianlink 的原节点分类和 WiFi Call 例外不强加给其他订阅；本脚
 
 ## 回退与隐私
 
-原始订阅不改。解除 FlClash 的脚本绑定或关闭 Bettbox 全局脚本，可恢复原订阅架构；原主组与增强组名不同时，还应核对其有效选择。要恢复原先的 Bettbox Lite 行为，应重新选择原脚本，而非用整包覆盖客户端数据。
+原始订阅不改。解除 FlClash 的脚本绑定或关闭 Bettbox 全局脚本，可恢复原订阅架构；原主组与增强组名不同时，还应核对其有效选择。要使用 Bettbox Lite，应选择保留的 `MyClash-Lite-Official`，而非用整包覆盖客户端数据。远程同步后的上游代码可能已变化；精确回退应使用已经核验的版本，不能假定当前上游永远等于此前版本。
 
 仓库只收录维护代码、生成脚本和公开使用说明。订阅 URL、密码、UUID、完整配置、设备记录、运行截图及本地回退资料禁止上传；不使用第三方订阅转换站。
 
