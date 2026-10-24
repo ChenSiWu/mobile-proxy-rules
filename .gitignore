@@ -1,0 +1,12 @@
+*
+!.gitignore
+!README.md
+!LICENSE
+!共享核心/
+!共享核心/build.cjs
+!共享核心/mobile-core.js
+!共享核心/myclash-catalog.json
+!Bettbox/
+!Bettbox/mobile-full.js
+!FlClash/
+!FlClash/mobile-full.js
