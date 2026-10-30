@@ -46,7 +46,14 @@
 
 不覆盖客户端管理的端口、VPN/TUN、IPv6、LAN 或嗅探开关，保留订阅 hosts 和私有 DNS policy。Bettbox 的后置覆写、FlClash 的选定字段 DNS 覆写仍可能影响最终结果，须检查实际运行配置。
 
-仅对已识别的 MNKCloud `redir-host` 源配置做手机 DNS 适配：保留监听、IPv6、节点引导 DNS、原私有 policy 与 hosts；采用 Fake-IP，国内域名使用原有加密直连 DNS，海外 DoQ 和备用 DoT 绑定本订阅主组。此适配来自 Android 实测的 DoH EOF 问题，不等于保证所有节点和所有网络都支持这些上游。不自动关闭 UDP；海外真实解析与 Fake-IP 应答要分别验收。
+仅对已识别的 MNKCloud `redir-host` 源配置及本脚本的旧 DNS 输出做窄适配：采用 Fake-IP，保留 IPv6、原加密国内 DNS、加密节点引导、私有 policy 与 hosts，不新增公网明文 DNS 或关闭证书校验。海外使用 Quad9 无拦截版与 AdGuard 不过滤版 DoH，并显式绑定本订阅主组；两条上游是并发竞速，不是先后回退。
+
+- FlClash 使用 `https://dns10.quad9.net/dns-query` 和 `https://unfiltered.adguard-dns.com/dns-query`。
+- Bettbox 使用对应的 `https://9.9.9.10/dns-query` 和 `https://94.140.14.140/dns-query`，保留正常 IP SAN 证书校验。实测当前 AnyTLS 节点的域名目标路径返回不匹配证书，而相同 DNS SNI 下仅把代理目的地址换为 IP 即正常；不能据此笼统归因客户端 DNS、bootstrap 或外层 TLS。不能通过跳过证书校验解决此类错误。
+- 已知默认监听 `127.0.0.1:1053` 在 Bettbox 改为 `127.0.0.1:10053`，FlClash 保持 `127.0.0.1:1053`。暂停的客户端仍可能持有 DNS socket，需避免抢占。自定义监听地址、其他订阅 DNS 与两个官方脚本不强制改写，不能保证任意两份配置都能同时启动。
+- `lan/local/localhost/home.arpa` 仍交给系统处理，属于局域网例外，可能使用本地网络的未加密 DNS；不把它描述成所有 DNS 都已加密。Android VPN 的 DNS 接管、真实海外解析与 Fake-IP 应答必须分别实测；加密 DNS 不等于全应用、全网络无泄漏保证。
+
+2026-10-30 的修订替代此前仅在部分节点成功的 DoQ/DoT 方案。不自动关闭 UDP、不照搬桌面参数，也不为修复不可用节点而把海外 DNS 改走直连。
 
 Qianlink 的原节点分类和 WiFi Call 例外不强加给其他订阅；本脚本不擅自改其原 DNS。无有效订阅或节点到期时，仅能验证配置结构。
 

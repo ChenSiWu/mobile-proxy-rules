@@ -11,6 +11,7 @@ const CATALOG = {"services":[{"name":"FCM","icon":"https://cdn.jsdmirror.com/gh/
 
 // CATALOG and MOBILE_CLIENT are inserted by build.cjs.
 const MOBILE_RULES_VERSION = "2026.10.25-4";
+const MOBILE_DNS_VERSION = "2026.10.30-1";
 const NS = "mobile_full_";
 const INFO_NODE = /^(?:剩余流量|已用流量|流量重置|套餐到期|到期时间|过期时间|官网|订阅地址|更新订阅|有效期|距离下次重置|Traffic|Expire|Reset)/i;
 const BUILTIN = new Set(["DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE"]);
@@ -32,11 +33,14 @@ const AI_SERVICES = [
 
 function main(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Expected a configuration object");
-  if (input["x-mobile-full"] === MOBILE_RULES_VERSION) return input;
   const adapter = detectSubscription(input);
   if (!adapter) return input;
 
   const config = JSON.parse(JSON.stringify(input));
+  if (input["x-mobile-full"] === MOBILE_RULES_VERSION) {
+    adaptMobileDns(config, adapter, MOBILE_CLIENT === "Bettbox" ? "默认代理" : adapter.main);
+    return config;
+  }
   const originalGroups = config["proxy-groups"] || [];
   const sourceMain = originalGroups.find(g => g.name === adapter.main);
   const mainName = MOBILE_CLIENT === "Bettbox" ? "默认代理" : adapter.main;
@@ -167,19 +171,30 @@ function main(input) {
 
 function adaptMobileDns(config, adapter, mainName) {
   const dns = config.dns;
-  // DoQ succeeds on the Android path where overseas DoH returns EOF; DoT is an alternate transport.
-  // Keep its private policies, hosts, bootstrap, IPv6 and listener; restore mobile Fake-IP handling.
-  if (adapter.kind !== "mnk" || !dns?.enable || dns["enhanced-mode"] !== "redir-host") return;
+  if (adapter.kind !== "mnk" || !dns?.enable) return;
+  const legacyNameservers = ["quic://unfiltered.adguard-dns.com:853#" + mainName, "tls://1.1.1.1:853#" + mainName];
+  const domainNameservers = ["https://dns10.quad9.net/dns-query#" + mainName, "https://unfiltered.adguard-dns.com/dns-query#" + mainName];
+  const legacyMobileDns = config["x-mobile-full"] === MOBILE_RULES_VERSION &&
+    dns["enhanced-mode"] === "fake-ip" && (JSON.stringify(dns.nameserver) === JSON.stringify(legacyNameservers) ||
+      (config["x-mobile-dns"] === MOBILE_DNS_VERSION && JSON.stringify(dns.nameserver) === JSON.stringify(domainNameservers)));
+  if (dns["enhanced-mode"] !== "redir-host" && !legacyMobileDns) return;
   const domestic = dns["direct-nameserver"];
   if (!Array.isArray(domestic) || !domestic.length) return;
+  // Paused clients keep their DNS sockets; do not let the two apps share this listener.
+  if (dns.listen === "127.0.0.1:1053" || (legacyMobileDns && dns.listen === "127.0.0.1:10053")) {
+    dns.listen = MOBILE_CLIENT === "Bettbox" ? "127.0.0.1:10053" : "127.0.0.1:1053";
+  }
   dns["enhanced-mode"] = "fake-ip";
   dns["fake-ip-range"] = dns["fake-ip-range"] || "198.18.0.1/15";
   dns["fake-ip-filter"] = unique(["rule-set:" + NS + "private", "rule-set:" + NS + "geolocation-cn", ...(dns["fake-ip-filter"] || [])]);
-  dns.nameserver = [
-    "quic://unfiltered.adguard-dns.com:853#" + mainName,
-    "tls://1.1.1.1:853#" + mainName,
-  ];
+  // Avoid the hostname-target certificate mismatch observed through the Bettbox node.
+  // Both IP endpoints retain normal certificate verification against their IP SANs.
+  dns.nameserver = MOBILE_CLIENT === "Bettbox" ? [
+    "https://9.9.9.10/dns-query#" + mainName,
+    "https://94.140.14.140/dns-query#" + mainName,
+  ] : domainNameservers;
   dns["nameserver-policy"] = { ["rule-set:" + NS + "geolocation-cn"]: domestic, ...(dns["nameserver-policy"] || {}) };
+  config["x-mobile-dns"] = MOBILE_DNS_VERSION;
 }
 
 function detectSubscription(config) {
